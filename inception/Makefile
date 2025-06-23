@@ -24,3 +24,6 @@ stop:
 # Start existing containers
 start:
 	docker-compose -f ./docker-compose.yml start
+
+rebuild: down
+	@$(MAKE) up
