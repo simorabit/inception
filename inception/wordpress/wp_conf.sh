@@ -1,34 +1,56 @@
 #!/bin/bash
-#---------------------------------------------------wp installation---------------------------------------------------#
-# wp-cli installation
+set -e
+
+#------------------------------#
+# WP-CLI installation
+#------------------------------#
+
+echo "Downloading WP-CLI..."
 curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
-# wp-cli permission
+
+echo "Making WP-CLI executable..."
 chmod +x wp-cli.phar
-# wp-cli move to bin
+
+echo "Moving WP-CLI to /usr/local/bin/wp..."
 mv wp-cli.phar /usr/local/bin/wp
 
-# go to wordpress directory
-cd /var/www/wordpress
-# give permission to wordpress directory
-chmod -R 755 /var/www/wordpress/
-# change owner of wordpress directory to www-data
-chown -R www-data:www-data /var/www/wordpress
-#---------------------------------------------------wp installation---------------------------------------------------##---------------------------------------------------wp installation---------------------------------------------------#
+#------------------------------#
+# WordPress directory permissions
+#------------------------------#
 
-# download wordpress core files
+echo "Setting permissions for /var/www/wordpress..."
+chmod -R 755 /var/www/wordpress/
+
+echo "Changing owner to www-data:www-data..."
+chown -R www-data:www-data /var/www/wordpress
+
+#------------------------------#
+# WordPress installation with WP-CLI
+#------------------------------#
+
+cd /var/www/wordpress
+
+echo "Downloading WordPress core..."
 wp core download --allow-root
-# create wp-config.php file with database details
+
+echo "Creating wp-config.php..."
 wp core config --dbhost=mariadb:3306 --dbname="$MYSQL_DB" --dbuser="$MYSQL_USER" --dbpass="$MYSQL_PASSWORD" --allow-root
-# install wordpress with the given title, admin username, password and email
+
+echo "Installing WordPress..."
 wp core install --url="$DOMAIN_NAME" --title="$WP_TITLE" --admin_user="$WP_ADMIN_N" --admin_password="$WP_ADMIN_P" --admin_email="$WP_ADMIN_E" --allow-root
-#create a new user with the given username, email, password and role
+
+echo "Creating additional user..."
 wp user create "$WP_U_NAME" "$WP_U_EMAIL" --user_pass="$WP_U_PASS" --role="$WP_U_ROLE" --allow-root
 
-#---------------------------------------------------php config---------------------------------------------------#
+#------------------------------#
+# PHP-FPM configuration
+#------------------------------#
 
-# change listen port from unix socket to 9000
-sed -i '36 s@/run/php/php7.4-fpm.sock@9000@' /etc/php/7.4/fpm/pool.d/www.conf
-# create a directory for php-fpm
+echo "Configuring PHP-FPM to listen on TCP port 9000..."
+sed -i 's|listen = /run/php/php7.4-fpm.sock|listen = 9000|' /etc/php/7.4/fpm/pool.d/www.conf
+
+echo "Creating /run/php directory if it doesn't exist..."
 mkdir -p /run/php
-# start php-fpm service in the foreground to keep the container running
-/usr/sbin/php-fpm7.4 -F
+
+echo "Starting PHP-FPM in foreground..."
+exec /usr/sbin/php-fpm7.4 -F
