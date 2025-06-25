@@ -29,7 +29,7 @@ services:
     depends_on:
       - mariadb
     ports:
-      - "8081:80"
+      - "8081:80" //no need
     restart: always
     env_file:
       - .env
