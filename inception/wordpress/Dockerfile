@@ -14,4 +14,4 @@ COPY ./wp_conf.sh /
 RUN  chmod +x wp_conf.sh
 
 # define the entrypoint command to run when the container starts
-ENTRYPOINT ["./wp_conf.sh"]
+ENTRYPOINT ["bash","./wp_conf.sh"]
