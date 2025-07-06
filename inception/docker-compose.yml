@@ -1,9 +1,8 @@
-version: '3.8'
-
 services:
   mariadb:
     build: ./mariadb
     restart: always
+    container_name: mariadb
     volumes:
       - mariadb_data:/var/lib/mysql
     env_file:
@@ -13,6 +12,7 @@ services:
 
   nginx:
     build: ./nginx
+    container_name: nginx
     ports:
       - "443:443"
     depends_on:
@@ -20,6 +20,8 @@ services:
       - wordpress
     volumes:
       - wordpress_data:/var/www/wordpress
+    env_file:
+      - .env
     networks:
       - app-net
 
@@ -28,8 +30,6 @@ services:
     container_name: wordpress
     depends_on:
       - mariadb
-    ports:
-      - "8081:80" //no need
     restart: always
     env_file:
       - .env
@@ -48,11 +48,11 @@ volumes:
     driver_opts:
       type: none
       o: bind
-      device: /home/simo/docker-volumes/mariadb
+      device: /home/mal-mora/docker-volumes/mariadb
 
   wordpress_data:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: /home/simo/docker-volumes/wordpress
+      device: /home/mal-mora/docker-volumes/wordpress
