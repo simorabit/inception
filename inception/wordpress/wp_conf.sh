@@ -1,56 +1,58 @@
 #!/bin/bash
 set -e
 
-#------------------------------#
-# WP-CLI installation
-#------------------------------#
 
-echo "Downloading WP-CLI..."
-curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
-
-echo "Making WP-CLI executable..."
+echo "🔧 Installing WP-CLI..."
+curl -sO https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
 chmod +x wp-cli.phar
-
-echo "Moving WP-CLI to /usr/local/bin/wp..."
 mv wp-cli.phar /usr/local/bin/wp
 
-#------------------------------#
-# WordPress directory permissions
-#------------------------------#
-
-echo "Setting permissions for /var/www/wordpress..."
-chmod -R 755 /var/www/wordpress/
-
-echo "Changing owner to www-data:www-data..."
-chown -R www-data:www-data /var/www/wordpress
-
-#------------------------------#
-# WordPress installation with WP-CLI
-#------------------------------#
-
+echo "📁 Preparing /var/www/wordpress directory..."
+mkdir -p /var/www/wordpress
 cd /var/www/wordpress
+chown -R www-data:www-data .
+chmod -R 755 .
 
-echo "Downloading WordPress core..."
-wp core download --allow-root
+#---------------------------------------------------#
+# WordPress Installation
+#---------------------------------------------------#
+if [ ! -f wp-config.php ]; then
+  echo "⬇️  Downloading WordPress core files..."
+  wp core download --allow-root
 
-echo "Creating wp-config.php..."
-wp core config --dbhost=mariadb:3306 --dbname="$MYSQL_DB" --dbuser="$MYSQL_USER" --dbpass="$MYSQL_PASSWORD" --allow-root
+  echo "⚙️  Creating wp-config.php..."
+  wp core config \
+    --dbhost=mariadb:3306 \
+    --dbname="$MYSQL_DB" \
+    --dbuser="$MYSQL_USER" \
+    --dbpass="$MYSQL_PASSWORD" \
+    --allow-root
 
-echo "Installing WordPress..."
-wp core install --url="$DOMAIN_NAME" --title="$WP_TITLE" --admin_user="$WP_ADMIN_N" --admin_password="$WP_ADMIN_P" --admin_email="$WP_ADMIN_E" --allow-root
+  echo "🌐 Installing WordPress..."
+  wp core install \
+    --url="$DOMAIN_NAME" \
+    --title="$WP_TITLE" \
+    --admin_user="$WP_ADMIN_N" \
+    --admin_password="$WP_ADMIN_P" \
+    --admin_email="$WP_ADMIN_E" \
+    --allow-root
 
-echo "Creating additional user..."
-wp user create "$WP_U_NAME" "$WP_U_EMAIL" --user_pass="$WP_U_PASS" --role="$WP_U_ROLE" --allow-root
+  echo "👤 Creating additional WordPress user..."
+  wp user create "$WP_U_NAME" "$WP_U_EMAIL" \
+    --user_pass="$WP_U_PASS" \
+    --role="$WP_U_ROLE" \
+    --allow-root
+else
+  echo "✅ WordPress already installed. Skipping download and install."
+fi
 
-#------------------------------#
-# PHP-FPM configuration
-#------------------------------#
+#---------------------------------------------------#
+# PHP-FPM Config
+#---------------------------------------------------#
 
-echo "Configuring PHP-FPM to listen on TCP port 9000..."
-sed -i 's|listen = /run/php/php7.4-fpm.sock|listen = 9000|' /etc/php/7.4/fpm/pool.d/www.conf
+echo "🔧 Configuring PHP-FPM..."
+sed -i 's|^listen = .*|listen = 9000|' /etc/php/7.4/fpm/pool.d/www.conf
+# mkdir -p /run/php
 
-echo "Creating /run/php directory if it doesn't exist..."
-mkdir -p /run/php
-
-echo "Starting PHP-FPM in foreground..."
+echo "🚀 Starting PHP-FPM..."
 exec /usr/sbin/php-fpm7.4 -F
